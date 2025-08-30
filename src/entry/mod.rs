@@ -1,6 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 mod key;
 
+use crate::util;
 use key::Serializable;
 use std::mem;
 
@@ -20,7 +21,7 @@ struct Entry<T: Serializable> {
 }
 
 impl<T: Serializable> Entry<T> {
-    fn new(key: T, value: Vec<u8>) -> Entry<T> {
+    pub fn new(key: T, value: Vec<u8>) -> Entry<T> {
         Entry {
             key,
             value: ValueReference {
@@ -31,7 +32,7 @@ impl<T: Serializable> Entry<T> {
         }
     }
 
-    fn new_preserving_timestamp(key: T, value: Vec<u8>, timestamp: u32) -> Entry<T> {
+    pub fn new_preserving_timestamp(key: T, value: Vec<u8>, timestamp: u32) -> Entry<T> {
         Entry {
             key,
             value: ValueReference {
@@ -42,7 +43,7 @@ impl<T: Serializable> Entry<T> {
         }
     }
 
-    fn new_deleted_entry(key: T) -> Entry<T> {
+    pub fn new_deleted_entry(key: T) -> Entry<T> {
         Entry {
             key,
             value: ValueReference {
@@ -53,7 +54,7 @@ impl<T: Serializable> Entry<T> {
         }
     }
 
-    fn endcode(&mut self) -> Result<Vec<u8>, std::io::Error> {
+    pub fn encode(&mut self) -> Result<Vec<u8>, std::io::Error> {
         let serialized_key = self.key.serialize()?;
         let key_size = serialized_key.len();
         let value_size = self.value.value.len() + TOMBSTONE_MARKER_SIZE;
@@ -84,5 +85,39 @@ impl<T: Serializable> Entry<T> {
         encoded.push(self.value.tombstone);
 
         Ok(encoded)
+    }
+
+    pub fn decode(content: Vec<u8>, offset: u32) -> Result<Entry<T>, std::io::Error> {
+        let mut updated_offset = offset;
+        let timestamp = util::get_int_from_le_bytes(&content, updated_offset)?;
+        updated_offset += RESERVED_TIMESTAMP_SIZE as u32;
+        let key_size = util::get_int_from_le_bytes(&content, updated_offset)?;
+        updated_offset += RESERVED_LENGTH_FOR_KEY_SIZE as u32;
+        let value_size = util::get_int_from_le_bytes(&content, updated_offset)?;
+        updated_offset += RESERVED_LENGTH_FOR_VALUE_SIZE as u32;
+
+        let key = content[updated_offset as usize..(updated_offset + key_size) as usize].to_vec();
+
+        updated_offset += key_size;
+
+        let value = content[updated_offset as usize
+            ..(updated_offset + value_size) as usize - TOMBSTONE_MARKER_SIZE]
+            .to_vec();
+
+        updated_offset += value_size - TOMBSTONE_MARKER_SIZE as u32;
+
+        let tombstone =
+            &content[updated_offset as usize..updated_offset as usize + TOMBSTONE_MARKER_SIZE];
+
+        let value_reference = ValueReference {
+            value,
+            tombstone: tombstone[0],
+        };
+
+        Ok(Entry {
+            key: T::deserialize(key)?,
+            value: value_reference,
+            timestamp,
+        })
     }
 }

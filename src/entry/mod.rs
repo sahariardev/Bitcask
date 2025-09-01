@@ -77,8 +77,8 @@ impl<T: Serializable> Entry<T> {
         }
 
         encoded.extend_from_slice(&timestamp.to_le_bytes());
-        encoded.extend_from_slice(&key_size.to_le_bytes());
-        encoded.extend_from_slice(&value_size.to_le_bytes());
+        encoded.extend_from_slice(&(key_size as u32).to_le_bytes());
+        encoded.extend_from_slice(&(value_size as u32).to_le_bytes());
         encoded.extend_from_slice(&serialized_key);
 
         encoded.extend_from_slice(&self.value.value);
@@ -119,5 +119,75 @@ impl<T: Serializable> Entry<T> {
             value: value_reference,
             timestamp,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::entry::key::Serializable;
+    use crate::entry::Entry;
+    use std::io::Error;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    impl Serializable for String {
+        fn serialize(&self) -> Result<Vec<u8>, Error> {
+            Ok(self.as_bytes().to_vec())
+        }
+
+        fn deserialize(bytes: Vec<u8>) -> Result<String, Error> {
+            Ok(String::from_utf8(bytes).unwrap())
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_roundtrip_standard() {
+        let key = "my-key".to_string();
+        let value = vec![1, 2, 3];
+
+        let mut entry = Entry::new(key.clone(), value.clone());
+        let encoded = entry.encode().unwrap();
+        let decoded_entry = Entry::<String>::decode(encoded, 0).unwrap();
+
+        assert_eq!(decoded_entry.key, key);
+        assert_eq!(decoded_entry.value.value, value);
+        assert_eq!(decoded_entry.value.tombstone, entry.value.tombstone);
+    }
+
+    #[test]
+    fn test_encode_decode_roundtrip_standard_preserving_timestamp() {
+        let key = "my-key".to_string();
+        let value = vec![1, 2, 3];
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as u32;
+
+        let mut entry = Entry::new_preserving_timestamp(key.clone(), value.clone(), timestamp);
+        let encoded = entry.encode().unwrap();
+        let decoded_entry = Entry::<String>::decode(encoded, 0).unwrap();
+
+        assert_eq!(decoded_entry.key, key);
+        assert_eq!(decoded_entry.value.value, value);
+        assert_eq!(decoded_entry.value.tombstone, entry.value.tombstone);
+        assert_eq!(decoded_entry.timestamp, entry.timestamp);
+    }
+
+    #[test]
+    fn test_encode_decode_roundtrip_deleted() {
+        let key = "deleted-key".to_string();
+
+        let mut entry = Entry::new_deleted_entry(key.clone());
+        let encoded = entry.encode().unwrap();
+        let decoded_entry = Entry::<String>::decode(encoded, 0).unwrap();
+
+        assert_eq!(decoded_entry.key, key);
+        assert_eq!(decoded_entry.value.tombstone, entry.value.tombstone);
+    }
+
+    #[test]
+    fn test_decode_insufficient_data() {
+        let short_data = vec![0, 1, 2, 3];
+        let result = Entry::<String>::decode(short_data, 0);
+        assert!(result.is_err());
     }
 }

@@ -1,5 +1,5 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-mod key;
+pub mod key;
 
 use crate::util;
 use key::Serializable;
@@ -14,7 +14,7 @@ struct ValueReference {
     tombstone: u8,
 }
 
-struct Entry<T: Serializable> {
+pub struct Entry<T: Serializable> {
     key: T,
     value: ValueReference,
     timestamp: u32,

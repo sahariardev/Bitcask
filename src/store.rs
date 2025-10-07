@@ -49,6 +49,7 @@ impl Store {
             .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "writing is not allowed"))?;
 
         let bytes_written = writer.write(buf)?;
+        let current_write_off_set = self.current_write_off_set;
 
         if bytes_written < buf.len() {
             return Err(Error::new(
@@ -58,7 +59,7 @@ impl Store {
         }
 
         self.current_write_off_set += bytes_written as i64;
-        Ok(bytes_written as i64)
+        Ok(current_write_off_set)
     }
 
     pub fn read(&mut self, offset: u64, size: usize) -> Result<Vec<u8>, Error> {

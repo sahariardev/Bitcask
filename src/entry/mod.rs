@@ -9,15 +9,15 @@ const TOMBSTONE_MARKER_SIZE: usize = mem::size_of::<u8>();
 const RESERVED_LENGTH_FOR_KEY_SIZE: usize = mem::size_of::<u32>();
 const RESERVED_LENGTH_FOR_VALUE_SIZE: usize = mem::size_of::<u32>();
 const RESERVED_TIMESTAMP_SIZE: usize = mem::size_of::<u32>();
-struct ValueReference {
-    value: Vec<u8>,
+pub struct ValueReference {
+    pub(crate) value: Vec<u8>,
     tombstone: u8,
 }
 
 pub struct Entry<T: Serializable> {
-    key: T,
-    value: ValueReference,
-    timestamp: u32,
+    pub key: T,
+    pub value: ValueReference,
+    pub timestamp: u32,
 }
 
 impl<T: Serializable> Entry<T> {

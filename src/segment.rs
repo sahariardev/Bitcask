@@ -96,45 +96,33 @@ mod tests {
         assert_eq!(read_entry.value.value, vec![1, 2, 3]);
     }
 
-    // #[test]
-    // fn test_append_and_read_multiple_entries() {
-    //     let dir = tempdir().unwrap();
-    //     let mut segment = Segment::new_segment(20, dir.path().to_str().unwrap()).unwrap();
-    //
-    //     // First entry
-    //     let entry1 = Entry {
-    //         key: "first_key".to_string(),
-    //         value: TestPayload("first_value".to_string()),
-    //     };
-    //     let response1 = segment.append(entry1).unwrap();
-    //
-    //     assert_eq!(response1.offset, 0);
-    //
-    //     // Second entry
-    //     let entry2 = Entry {
-    //         key: "second_key".to_string(),
-    //         value: TestPayload("a slightly longer second value".to_string()),
-    //     };
-    //     let response2 = segment.append(entry2).unwrap();
-    //
-    //     // The second offset should be exactly after the first entry
-    //     assert_eq!(response2.offset, response1.entry_length as u64);
-    //
-    //     // Read back the first entry
-    //     let read_entry1: Entry<TestPayload> = segment
-    //         .read(response1.offset, response1.entry_length as usize)
-    //         .unwrap();
-    //     assert_eq!(read_entry1.key, "first_key");
-    //     assert_eq!(read_entry1.value, TestPayload("first_value".to_string()));
-    //
-    //     // Read back the second entry
-    //     let read_entry2: Entry<TestPayload> = segment
-    //         .read(response2.offset, response2.entry_length as usize)
-    //         .unwrap();
-    //     assert_eq!(read_entry2.key, "second_key");
-    //     assert_eq!(
-    //         read_entry2.value,
-    //         TestPayload("a slightly longer second value".to_string())
-    //     );
-    // }
+    #[test]
+    fn test_append_and_read_multiple_entries() {
+        let dir = tempdir().unwrap();
+        let mut segment = Segment::new_segment(20, dir.path().to_str().unwrap()).unwrap();
+
+        let entry1 = Entry::new("hello".to_string(), vec![1, 2, 3]);
+        let response1 = segment.append(entry1).unwrap();
+
+        assert_eq!(response1.offset, 0);
+
+        let entry2 = Entry::new("greet".to_string(), "hell world".as_bytes().to_vec());
+        let response2 = segment.append(entry2).unwrap();
+
+        assert_eq!(response2.offset, response1.entry_length as i64);
+
+        let read_entry1: Entry<String> = segment
+            .read(response1.offset as u64, response1.entry_length as usize)
+            .unwrap();
+
+        assert_eq!(read_entry1.key, "hello");
+        assert_eq!(read_entry1.value.value, vec![1, 2, 3]);
+
+        let read_entry2: Entry<String> = segment
+            .read(response2.offset as u64, response2.entry_length as usize)
+            .unwrap();
+
+        assert_eq!(read_entry2.key, "greet");
+        assert_eq!(read_entry2.value.value, "hell world".as_bytes().to_vec());
+    }
 }

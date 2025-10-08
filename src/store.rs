@@ -1,4 +1,4 @@
-use std::fs::{remove_file, File, OpenOptions};
+use std::fs::{File, OpenOptions, remove_file};
 use std::io::ErrorKind::InvalidData;
 use std::io::{Error, Read, Seek, SeekFrom};
 use std::io::{ErrorKind, Write};

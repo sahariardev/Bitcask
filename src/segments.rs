@@ -1,15 +1,59 @@
-use crate::segment::Segment;
+use crate::entry;
+use crate::entry::Entry;
+use crate::segment::{AppendEntryResponse, Segment};
 use crate::time_based_id_generator::TimeBasedIdGenerator;
+use std::collections::HashMap;
+use std::io::Error;
+use std::io::ErrorKind::InvalidData;
+use std::mem;
 
 struct Segments {
     active_segment: Segment,
-    inactive_segments: Vec<Segment>,
+    inactive_segments: HashMap<u64, Segment>,
     directory: String,
     max_segment_size: u32,
     id_generator: TimeBasedIdGenerator,
 }
 
 impl Segments {
+    pub fn append<T: entry::key::Serializable>(
+        &mut self,
+        key: T,
+        value: Vec<u8>,
+    ) -> Result<AppendEntryResponse, std::io::Error> {
+        self.maybe_roll_over_active_segment()?;
+
+        self.active_segment.append(Entry::new(key, value))
+    }
+
+    pub fn append_delete<T: entry::key::Serializable>(
+        &mut self,
+        key: T,
+        value: Vec<u8>,
+    ) -> Result<AppendEntryResponse, std::io::Error> {
+        self.maybe_roll_over_active_segment()?;
+
+        self.active_segment.append(Entry::new_deleted_entry(key))
+    }
+
+    pub fn read<T: entry::key::Serializable>(
+        &mut self,
+        file_id: u64,
+        size: usize,
+        offset: u64,
+    ) -> Result<Entry<T>, std::io::Error> {
+        if self.active_segment.file_id == file_id {
+            return self.active_segment.read(offset, size);
+        }
+
+        if !self.inactive_segments.contains_key(&file_id) {
+            return Err(Error::new(InvalidData, "file_id not found"));
+        }
+
+        let segment = self.inactive_segments.get_mut(&file_id).unwrap();
+        segment.read(offset, size)
+    }
+
     fn maybe_roll_over_segment(
         &self,
         segment: &Segment,
@@ -21,5 +65,17 @@ impl Segments {
         }
 
         Ok(None)
+    }
+
+    fn maybe_roll_over_active_segment(&mut self) -> Result<(), std::io::Error> {
+        let new_segment = self.maybe_roll_over_segment(&self.active_segment)?;
+
+        if let Some(segment) = new_segment {
+            let old_segment = mem::replace(&mut self.active_segment, segment);
+            self.inactive_segments
+                .insert(old_segment.file_id, old_segment);
+        }
+
+        Ok(())
     }
 }

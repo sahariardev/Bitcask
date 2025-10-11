@@ -16,6 +16,18 @@ struct Segments {
 }
 
 impl Segments {
+    pub fn new(directory: String, max_segment_size: u32) -> Result<Segments, Error> {
+        let id_generator = TimeBasedIdGenerator::new();
+        let segment = Segment::new_segment(id_generator.next(), directory.as_str())?;
+
+        Ok(Segments {
+            active_segment: segment,
+            id_generator: id_generator,
+            directory: directory,
+            max_segment_size: max_segment_size,
+            inactive_segments: HashMap::new(),
+        })
+    }
     pub fn append<T: entry::key::Serializable>(
         &mut self,
         key: T,

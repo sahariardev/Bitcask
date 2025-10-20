@@ -7,7 +7,7 @@ use std::io::Error;
 use std::io::ErrorKind::InvalidData;
 use std::mem;
 
-struct Segments {
+pub struct Segments {
     active_segment: Segment,
     inactive_segments: HashMap<u64, Segment>,
     directory: String,
@@ -41,7 +41,6 @@ impl Segments {
     pub fn append_delete<T: entry::key::Serializable>(
         &mut self,
         key: T,
-        value: Vec<u8>,
     ) -> Result<AppendEntryResponse, std::io::Error> {
         self.maybe_roll_over_active_segment()?;
 

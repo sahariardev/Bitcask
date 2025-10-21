@@ -62,14 +62,10 @@ impl Segment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Read;
     use tempfile::tempdir;
 
     #[test]
     fn test_new_segment() {
-        let dir = tempdir().unwrap();
-        let dir_path_str = dir.path().to_str().unwrap();
-
         let segment = Segment::new_segment(1, ".").unwrap();
 
         assert_eq!(segment.file_id, 1);

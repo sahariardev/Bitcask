@@ -1,7 +1,6 @@
 use crate::entry;
 use crate::segment::AppendEntryResponse;
 use std::collections::HashMap;
-use std::hash::Hash;
 
 pub struct KeyDirectory<T: entry::key::Serializable> {
     entry_by_key: HashMap<T, AppendEntryResponse>,
@@ -19,6 +18,9 @@ impl<T: entry::key::Serializable> KeyDirectory<T> {
     }
 
     pub fn get(&self, key: T) -> Option<&AppendEntryResponse> {
+        for (key, value) in &self.entry_by_key {
+            println!("{:?}: {} -- {}--{}", key, value.offset, value.entry_length, value.file_id);
+        }
         self.entry_by_key.get(&key)
     }
 

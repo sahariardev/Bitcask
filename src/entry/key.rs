@@ -1,6 +1,7 @@
+use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
-pub trait Serializable: Eq + Hash + Clone {
+pub trait Serializable: Eq + Hash + Clone + Display + Debug {
     fn serialize(&self) -> Result<Vec<u8>, std::io::Error>;
     fn deserialize(bytes: Vec<u8>) -> Result<Self, std::io::Error>
     where

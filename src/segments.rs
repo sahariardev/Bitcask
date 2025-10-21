@@ -9,7 +9,7 @@ use std::mem;
 
 pub struct Segments {
     active_segment: Segment,
-    inactive_segments: HashMap<u64, Segment>,
+    pub(crate) inactive_segments: HashMap<u64, Segment>,
     directory: String,
     max_segment_size: u32,
     id_generator: TimeBasedIdGenerator,
@@ -33,6 +33,7 @@ impl Segments {
         key: T,
         value: Vec<u8>,
     ) -> Result<AppendEntryResponse, std::io::Error> {
+        println!("here before rolling over segment");
         self.maybe_roll_over_active_segment()?;
 
         self.active_segment.append(Entry::new(key, value))
@@ -65,13 +66,13 @@ impl Segments {
         segment.read(offset, size)
     }
 
-    fn maybe_roll_over_segment(
-        &self,
-        segment: &Segment,
-    ) -> Result<Option<Segment>, std::io::Error> {
+    fn maybe_roll_over_segment(&self, segment: &Segment) -> Result<Option<Segment>, Error> {
         if segment.store.current_write_off_set >= self.max_segment_size as i64 {
+            println!("next id is {}", self.id_generator.next());
+            println!("old  id is {}", self.active_segment.file_id);
             let new_segment =
                 Segment::new_segment(self.id_generator.next(), self.directory.as_str())?;
+            
             return Ok(Some(new_segment));
         }
 
@@ -83,6 +84,7 @@ impl Segments {
 
         if let Some(segment) = new_segment {
             let old_segment = mem::replace(&mut self.active_segment, segment);
+            println!("Rolled over  active segment");
             self.inactive_segments
                 .insert(old_segment.file_id, old_segment);
         }

@@ -18,9 +18,6 @@ impl<T: entry::key::Serializable> KeyDirectory<T> {
     }
 
     pub fn get(&self, key: T) -> Option<&AppendEntryResponse> {
-        for (key, value) in &self.entry_by_key {
-            println!("{:?}: {} -- {}--{}", key, value.offset, value.entry_length, value.file_id);
-        }
         self.entry_by_key.get(&key)
     }
 

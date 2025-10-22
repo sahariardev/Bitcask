@@ -53,6 +53,8 @@ impl<T: entry::key::Serializable> KVStore<T> {
 #[cfg(test)]
 mod tests {
     use crate::kv_store::KVStore;
+    use std::thread;
+    use std::time::Duration;
     use tempfile::tempdir;
 
     #[test]
@@ -157,38 +159,40 @@ mod tests {
         assert_eq!(retrieved_value_after_delete, None);
     }
 
-    // #[test]
-    // fn test_segment_rollover() {
-    //     let dir = tempdir().unwrap();
-    //     let dir_path = dir.path().to_str().unwrap().to_string();
-    // 
-    //     let max_segment_size = 30;
-    //     let mut kv_store = KVStore::<String>::new(dir_path, max_segment_size).unwrap();
-    // 
-    //     let key1 = "key1".to_string();
-    //     let value1 = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 1];
-    //     let key2 = "key2".to_string();
-    //     let value2 = vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-    // 
-    //     kv_store.put(key1.clone(), value1.clone()).unwrap();
-    // 
-    //     {
-    //         let segments = kv_store.segments.read().unwrap();
-    //         assert_eq!(segments.inactive_segments.len(), 0);
-    //     }
-    // 
-    //     kv_store.put(key2.clone(), value2.clone()).unwrap();
-    //     
-    //     {
-    //         let segments = kv_store.segments.read().unwrap();
-    //         assert_eq!(segments.inactive_segments.len(), 1);
-    //     }
-    // 
-    //     let retrieved_value1 = kv_store.get(key1);
-    //     
-    //     assert_eq!(retrieved_value1, Some(value1));
-    // 
-    //     let retrieved_value2 = kv_store.get(key2);
-    //     assert_eq!(retrieved_value2, Some(value2));
-    // }
+    #[test]
+    fn test_segment_rollover() {
+        let dir = tempdir().unwrap();
+        let dir_path = dir.path().to_str().unwrap().to_string();
+
+        let max_segment_size = 30;
+        let mut kv_store = KVStore::<String>::new(dir_path, max_segment_size).unwrap();
+
+        let key1 = "key1".to_string();
+        let value1 = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 1];
+        let key2 = "key2".to_string();
+        let value2 = vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+        kv_store.put(key1.clone(), value1.clone()).unwrap();
+
+        {
+            let segments = kv_store.segments.read().unwrap();
+            assert_eq!(segments.inactive_segments.len(), 0);
+        }
+
+        thread::sleep(Duration::from_secs(2));
+
+        kv_store.put(key2.clone(), value2.clone()).unwrap();
+
+        {
+            let segments = kv_store.segments.read().unwrap();
+            assert_eq!(segments.inactive_segments.len(), 1);
+        }
+
+        let retrieved_value1 = kv_store.get(key1);
+
+        assert_eq!(retrieved_value1, Some(value1));
+
+        let retrieved_value2 = kv_store.get(key2);
+        assert_eq!(retrieved_value2, Some(value2));
+    }
 }

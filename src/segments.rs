@@ -8,11 +8,11 @@ use std::io::ErrorKind::InvalidData;
 use std::mem;
 
 pub struct Segments {
-    active_segment: Segment,
-    pub(crate) inactive_segments: HashMap<u64, Segment>,
-    directory: String,
-    max_segment_size: u32,
-    id_generator: TimeBasedIdGenerator,
+    pub active_segment: Segment,
+    pub inactive_segments: HashMap<u64, Segment>,
+    pub directory: String,
+    pub max_segment_size: u32,
+    pub id_generator: TimeBasedIdGenerator,
 }
 
 impl Segments {
@@ -72,7 +72,7 @@ impl Segments {
             println!("old  id is {}", self.active_segment.file_id);
             let new_segment =
                 Segment::new_segment(self.id_generator.next(), self.directory.as_str())?;
-            
+
             return Ok(Some(new_segment));
         }
 

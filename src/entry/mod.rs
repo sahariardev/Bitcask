@@ -87,7 +87,34 @@ impl<T: Serializable> Entry<T> {
         Ok(encoded)
     }
 
+    // decode_from performs the decode operation.
+    // Encoding scheme consists of the following structure:
+    //
+    //	┌───────────┬──────────┬────────────┬─────┬───────┐
+    //	│ timestamp │ key_size │ value_size │ key │ value │
+    //	└───────────┴──────────┴────────────┴─────┴───────┘
+
     pub fn decode(content: Vec<u8>, offset: u32) -> Result<Entry<T>, std::io::Error> {
+        let (entry, _) = Self::decode_from(content, offset)?;
+
+        Ok(entry)
+    }
+
+    pub fn decode_multi(content: Vec<u8>) -> Result<Vec<Entry<T>>, std::io::Error> {
+        let length = content.len();
+        let mut offset: u32 = 0;
+        let mut entries = Vec::new();
+
+        while offset < length as u32 {
+            let (entry, traversed_offset) = Self::decode_from(content.clone(), offset)?;
+            entries.push(entry);
+            offset = traversed_offset;
+        }
+
+        Ok(entries)
+    }
+
+    fn decode_from(content: Vec<u8>, offset: u32) -> Result<(Entry<T>, u32), std::io::Error> {
         let mut updated_offset = offset;
         let timestamp = util::get_int_from_le_bytes(&content, updated_offset)?;
         updated_offset += RESERVED_TIMESTAMP_SIZE as u32;
@@ -114,11 +141,14 @@ impl<T: Serializable> Entry<T> {
             tombstone: tombstone[0],
         };
 
-        Ok(Entry {
-            key: T::deserialize(key)?,
-            value: value_reference,
-            timestamp,
-        })
+        Ok((
+            Entry {
+                key: T::deserialize(key)?,
+                value: value_reference,
+                timestamp,
+            },
+            updated_offset,
+        ))
     }
 }
 

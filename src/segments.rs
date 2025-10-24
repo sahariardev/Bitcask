@@ -37,7 +37,6 @@ impl Segments {
         key: T,
         value: Vec<u8>,
     ) -> Result<AppendEntryResponse, std::io::Error> {
-        println!("here before rolling over segment");
         self.maybe_roll_over_active_segment()?;
 
         self.active_segment.append(Entry::new(key, value))

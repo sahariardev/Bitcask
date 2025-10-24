@@ -159,15 +159,15 @@ mod tests {
     use std::io::Error;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    impl Serializable for String {
-        fn serialize(&self) -> Result<Vec<u8>, Error> {
-            Ok(self.as_bytes().to_vec())
-        }
-
-        fn deserialize(bytes: Vec<u8>) -> Result<String, Error> {
-            Ok(String::from_utf8(bytes).unwrap())
-        }
-    }
+    // impl Serializable for String {
+    //     fn serialize(&self) -> Result<Vec<u8>, Error> {
+    //         Ok(self.as_bytes().to_vec())
+    //     }
+    // 
+    //     fn deserialize(bytes: Vec<u8>) -> Result<String, Error> {
+    //         Ok(String::from_utf8(bytes).unwrap())
+    //     }
+    // }
 
     #[test]
     fn test_encode_decode_roundtrip_standard() {

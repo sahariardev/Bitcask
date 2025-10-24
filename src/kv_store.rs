@@ -1,5 +1,6 @@
 use crate::entry;
 use crate::key_directory::KeyDirectory;
+use crate::segment::AppendEntryResponse;
 use crate::segments::Segments;
 use std::sync::{Arc, RwLock};
 
@@ -13,10 +14,14 @@ impl<T: entry::key::Serializable> KVStore<T> {
         let segments = Segments::new(directory, max_segment_size)?;
         let directory = KeyDirectory::new();
 
-        Ok(KVStore {
+        let mut kv_store = KVStore {
             segments: Arc::new(RwLock::new(segments)),
             directory,
-        })
+        };
+
+        kv_store.reload().expect("Unable to reload kv store");
+
+        Ok(kv_store)
     }
 
     pub fn put(&mut self, key: T, value: Vec<u8>) -> Result<(), std::io::Error> {
@@ -45,6 +50,26 @@ impl<T: entry::key::Serializable> KVStore<T> {
         let mut segments = self.segments.write().unwrap();
         let _ = segments.append_delete(key.clone());
         self.directory.remove(key);
+
+        Ok(())
+    }
+
+    fn reload(&mut self) -> Result<(), std::io::Error> {
+        let mut segments = self.segments.write().unwrap();
+
+        for (file_id, segment) in segments.inactive_segments.iter_mut() {
+            let entries = segment.read_full::<T>()?;
+
+            for (entry, offset, length) in entries {
+                let append_entry_response = AppendEntryResponse {
+                    file_id: *file_id,
+                    offset: offset as i64,
+                    entry_length: length,
+                };
+
+                self.directory.put(entry.key, append_entry_response);
+            }
+        }
 
         Ok(())
     }

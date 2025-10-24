@@ -100,14 +100,14 @@ impl<T: Serializable> Entry<T> {
         Ok(entry)
     }
 
-    pub fn decode_multi(content: Vec<u8>) -> Result<Vec<Entry<T>>, std::io::Error> {
+    pub fn decode_multi(content: Vec<u8>) -> Result<Vec<(Entry<T>, u32, u32)>, std::io::Error> {
         let length = content.len();
         let mut offset: u32 = 0;
         let mut entries = Vec::new();
 
         while offset < length as u32 {
             let (entry, traversed_offset) = Self::decode_from(content.clone(), offset)?;
-            entries.push(entry);
+            entries.push((entry, offset, traversed_offset - offset));
             offset = traversed_offset;
         }
 

@@ -1,11 +1,11 @@
 use crate::entry;
 use crate::entry::Entry;
-use crate::segment::{AppendEntryResponse, Segment};
+use crate::segment::{AppendEntryResponse, Segment, SEGMENT_FILE_PREFIX, SEGMENT_FILE_SUFFIX};
 use crate::time_based_id_generator::TimeBasedIdGenerator;
 use std::collections::HashMap;
 use std::io::Error;
 use std::io::ErrorKind::InvalidData;
-use std::mem;
+use std::{fs, mem};
 
 pub struct Segments {
     pub active_segment: Segment,
@@ -20,13 +20,17 @@ impl Segments {
         let id_generator = TimeBasedIdGenerator::new();
         let segment = Segment::new_segment(id_generator.next(), directory.as_str())?;
 
-        Ok(Segments {
+        let mut segments = Segments {
             active_segment: segment,
             id_generator,
             directory,
             max_segment_size,
             inactive_segments: HashMap::new(),
-        })
+        };
+
+        segments.reload().expect("Segments reload failed");
+
+        Ok(segments)
     }
     pub fn append<T: entry::key::Serializable>(
         &mut self,
@@ -64,6 +68,34 @@ impl Segments {
 
         let segment = self.inactive_segments.get_mut(&file_id).unwrap();
         segment.read(offset, size)
+    }
+
+    pub fn reload(&mut self) -> Result<(), Error> {
+        for entry in fs::read_dir(&self.directory)? {
+            let entry = entry?;
+            let path = entry.path();
+            let file_name = path.file_name().unwrap().to_str().unwrap();
+
+            if path.is_file()
+                && file_name
+                    .ends_with(&(SEGMENT_FILE_PREFIX.to_owned() + "." + SEGMENT_FILE_SUFFIX))
+            {
+                let file_id = String::from(file_name)
+                    .split("_")
+                    .next()
+                    .unwrap()
+                    .parse::<u64>()
+                    .unwrap();
+
+                if self.active_segment.file_id != file_id {
+                    let segment =
+                        Segment::reload_inactive_segment(file_id, self.directory.as_str())?;
+                    self.inactive_segments.insert(file_id, segment);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn maybe_roll_over_segment(&self, segment: &Segment) -> Result<Option<Segment>, Error> {

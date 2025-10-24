@@ -4,8 +4,8 @@ use crate::store::Store;
 use std::fs::File;
 use std::path::PathBuf;
 
-const SEGMENT_FILE_PREFIX: &str = "segment";
-const SEGMENT_FILE_SUFFIX: &str = "data";
+pub const SEGMENT_FILE_PREFIX: &str = "segment";
+pub const SEGMENT_FILE_SUFFIX: &str = "data";
 pub struct Segment {
     pub file_id: u64,
     pub file_path: String,
@@ -28,6 +28,25 @@ impl Segment {
         let _ = File::create(&file_path);
 
         let store = Store::new(file_path.to_str().unwrap())?;
+
+        Ok(Segment {
+            file_id,
+            file_path: file_path.to_str().unwrap().to_string(),
+            store,
+        })
+    }
+
+    pub fn reload_inactive_segment(
+        file_id: u64,
+        directory: &str,
+    ) -> Result<Segment, std::io::Error> {
+        let file_name = format!(
+            "{}_{}.{}",
+            file_id, SEGMENT_FILE_PREFIX, SEGMENT_FILE_SUFFIX
+        );
+        let file_path = PathBuf::from(directory).join(file_name);
+
+        let store = Store::reload(file_path.to_str().unwrap())?;
 
         Ok(Segment {
             file_id,
@@ -58,7 +77,9 @@ impl Segment {
         Entry::decode(bytes, 0)
     }
 
-    pub fn read_full<T: Serializable>(&mut self) -> Result<Vec<Entry<T>>, std::io::Error> {
+    pub fn read_full<T: Serializable>(
+        &mut self,
+    ) -> Result<Vec<(Entry<T>, u32, u32)>, std::io::Error> {
         let bytes = self.store.read_full()?;
         Entry::decode_multi(bytes)
     }

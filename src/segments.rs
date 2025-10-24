@@ -22,9 +22,9 @@ impl Segments {
 
         Ok(Segments {
             active_segment: segment,
-            id_generator: id_generator,
-            directory: directory,
-            max_segment_size: max_segment_size,
+            id_generator,
+            directory,
+            max_segment_size,
             inactive_segments: HashMap::new(),
         })
     }

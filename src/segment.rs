@@ -1,5 +1,5 @@
-use crate::entry::key::Serializable;
 use crate::entry::Entry;
+use crate::entry::key::Serializable;
 use crate::store::Store;
 use std::fs::File;
 use std::path::PathBuf;
@@ -56,6 +56,11 @@ impl Segment {
     ) -> Result<Entry<T>, std::io::Error> {
         let bytes = self.store.read(offset, size)?;
         Entry::decode(bytes, 0)
+    }
+
+    pub fn read_full<T: Serializable>(&mut self) -> Result<Vec<Entry<T>>, std::io::Error> {
+        let bytes = self.store.read_full()?;
+        Entry::decode_multi(bytes)
     }
 }
 

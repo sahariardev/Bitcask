@@ -99,8 +99,6 @@ impl Segments {
 
     fn maybe_roll_over_segment(&self, segment: &Segment) -> Result<Option<Segment>, Error> {
         if segment.store.current_write_off_set >= self.max_segment_size as i64 {
-            println!("next id is {}", self.id_generator.next());
-            println!("old  id is {}", self.active_segment.file_id);
             let new_segment =
                 Segment::new_segment(self.id_generator.next(), self.directory.as_str())?;
 

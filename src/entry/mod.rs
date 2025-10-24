@@ -67,6 +67,16 @@ impl<T: Serializable> Entry<T> {
                 + value_size,
         );
 
+        println!(
+            "{} {}",
+            "total size is: ",
+            RESERVED_TIMESTAMP_SIZE
+                + RESERVED_LENGTH_FOR_KEY_SIZE
+                + RESERVED_LENGTH_FOR_VALUE_SIZE
+                + key_size
+                + value_size
+        );
+
         let mut timestamp = self.timestamp;
 
         if self.timestamp == 0 {
@@ -107,8 +117,8 @@ impl<T: Serializable> Entry<T> {
 
         while offset < length as u32 {
             let (entry, traversed_offset) = Self::decode_from(content.clone(), offset)?;
-            entries.push((entry, offset, traversed_offset - offset));
-            offset = traversed_offset;
+            entries.push((entry, offset, traversed_offset - offset + 1));
+            offset = traversed_offset + 1;
         }
 
         Ok(entries)
@@ -154,16 +164,14 @@ impl<T: Serializable> Entry<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::entry::key::Serializable;
     use crate::entry::Entry;
-    use std::io::Error;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     // impl Serializable for String {
     //     fn serialize(&self) -> Result<Vec<u8>, Error> {
     //         Ok(self.as_bytes().to_vec())
     //     }
-    // 
+    //
     //     fn deserialize(bytes: Vec<u8>) -> Result<String, Error> {
     //         Ok(String::from_utf8(bytes).unwrap())
     //     }
